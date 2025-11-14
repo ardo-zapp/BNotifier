@@ -17,6 +17,7 @@ import java.text.DecimalFormat
 import java.text.DecimalFormatSymbols
 import java.util.*
 import kotlin.math.cos
+import kotlin.math.roundToInt
 
 
 open class ArcProgress @JvmOverloads constructor(
@@ -180,11 +181,18 @@ open class ArcProgress @JvmOverloads constructor(
 
     open fun setProgress(progress: Float) {
         val dfs = DecimalFormatSymbols(Locale.US)
-        this.progress = DecimalFormat("#.##", dfs).format(progress.toDouble()).toFloat()
-        if (this.progress > max) {
-            this.progress %= max.toFloat()
+        val formatted = DecimalFormat("#.##", dfs).format(progress.toDouble()).toFloat()
+        val normalized = formatted.roundToInt().coerceIn(0, max)
+        if (this.progress == normalized.toFloat()) {
+            return
         }
-        currentProgress = 0
+        this.progress = normalized.toFloat()
+        if (currentProgress > max) {
+            currentProgress = max
+        }
+        if (currentProgress < 0) {
+            currentProgress = 0
+        }
         invalidate()
     }
 
@@ -301,6 +309,13 @@ open class ArcProgress @JvmOverloads constructor(
     override fun onDraw(canvas: Canvas) {
         super.onDraw(canvas)
         val startAngle = 270 - arcAngle / 2f
+        val targetProgress = progress.toInt().coerceIn(0, max)
+        if (currentProgress > max) {
+            currentProgress = max
+        }
+        if (currentProgress < 0) {
+            currentProgress = 0
+        }
         val finishedSweepAngle = currentProgress / max.toFloat() * arcAngle
         var finishedStartAngle = startAngle
         if (progress == 0f) finishedStartAngle = 0.01f
@@ -344,9 +359,16 @@ open class ArcProgress @JvmOverloads constructor(
                 textPaint!!
             )
         }
-        if (currentProgress < progress) {
-            currentProgress++
-            invalidate()
+        when {
+            currentProgress < targetProgress -> {
+                currentProgress++
+                invalidate()
+            }
+
+            currentProgress > targetProgress -> {
+                currentProgress--
+                invalidate()
+            }
         }
     }
 

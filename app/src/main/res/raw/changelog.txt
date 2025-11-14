@@ -8,7 +8,6 @@
 - Support For Android 13 Tiramisu
 - Added Battery Capacity Info
 - Added Power Monitor
-- Added CPU Usage (BETA)
 - Added Custom Vibration Duration (PRO Only)
 - Settings use Fahrenheit now only for notifications
 - Bug Fixes

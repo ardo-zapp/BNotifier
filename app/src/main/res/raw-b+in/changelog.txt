@@ -8,7 +8,6 @@
 - Dukungan Untuk Android 13 Tiramisu
 - Menambahkan Info Kapasitas Baterai
 - Menambahkan Monitor Daya
-- Menambahkan Penggunaan CPU (BETA)
 - Menambahkan Durasi Getaran Khusus (Khusus PRO)
 - Pengaturan Gunakan Fahrenheit sekarang hanya untuk notifikasi
 - Perbaikan bug

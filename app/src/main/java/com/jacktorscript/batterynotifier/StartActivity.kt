@@ -5,7 +5,6 @@ import android.os.Build
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
-import android.util.Log
 import android.widget.Button
 import androidx.appcompat.app.AppCompatActivity
 import androidx.appcompat.app.AppCompatDelegate
@@ -17,6 +16,8 @@ import com.android.billingclient.api.BillingResult
 import com.android.billingclient.api.Purchase
 import com.android.billingclient.api.QueryPurchasesParams
 import com.google.android.gms.ads.AdRequest
+import com.google.android.gms.ads.AdError
+import com.google.android.gms.ads.FullScreenContentCallback
 import com.google.android.gms.ads.LoadAdError
 import com.google.android.gms.ads.interstitial.InterstitialAd
 import com.google.android.gms.ads.interstitial.InterstitialAdLoadCallback
@@ -30,6 +31,7 @@ class StartActivity : AppCompatActivity() {
     private var prefs: Prefs? = null
     private var prefsConfig: PrefsConfig? = null
     private var mInterstitialAd: InterstitialAd? = null
+    private var isAdLoading = false
 
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -55,29 +57,7 @@ class StartActivity : AppCompatActivity() {
         checkPremium()
 
 
-        if (prefsConfig!!.getPremium() == 0) {
-            if (!prefsConfig!!.getBoolean("first_run", true)) {
-                Log.d("SETUP: ", "First Setup")
-                val adRequest = AdRequest.Builder().build()
-                InterstitialAd.load(
-                    this,
-                    "ca-app-pub-9327089289176881/9325901738",
-                    adRequest,
-                    object : InterstitialAdLoadCallback() {
-                        override fun onAdFailedToLoad(adError: LoadAdError) {
-                            //Log.d(tag, adError.toString())
-                            mInterstitialAd = null
-                        }
-
-                        override fun onAdLoaded(interstitialAd: InterstitialAd) {
-                            //Log.d(tag, "Ad was loaded.")
-                            mInterstitialAd = interstitialAd
-                            mInterstitialAd?.show(this@StartActivity)
-                        }
-
-                    })
-            }
-        }
+        maybeLoadInterstitial()
 
 
 
@@ -91,13 +71,58 @@ class StartActivity : AppCompatActivity() {
         val button = findViewById<Button>(R.id.btn_continue)
         button.setOnClickListener {
             prefsConfig!!.setBoolean("first_run", false)
-            viewMainActivity()
+            showInterstitialOrNavigate()
         }
     }
 
     private fun viewMainActivity() {
         startActivity(Intent(this, MainActivity::class.java))
         finish()
+    }
+
+    private fun maybeLoadInterstitial() {
+        if (prefsConfig!!.getPremium() != 0 || isAdLoading || mInterstitialAd != null) {
+            return
+        }
+        val adRequest = AdRequest.Builder().build()
+        isAdLoading = true
+        InterstitialAd.load(
+            this,
+            "ca-app-pub-9327089289176881/9325901738",
+            adRequest,
+            object : InterstitialAdLoadCallback() {
+                override fun onAdFailedToLoad(adError: LoadAdError) {
+                    mInterstitialAd = null
+                    isAdLoading = false
+                }
+
+                override fun onAdLoaded(interstitialAd: InterstitialAd) {
+                    mInterstitialAd = interstitialAd
+                    isAdLoading = false
+                }
+            }
+        )
+    }
+
+    private fun showInterstitialOrNavigate() {
+        val interstitial = mInterstitialAd
+        if (interstitial != null) {
+            interstitial.fullScreenContentCallback = object : FullScreenContentCallback() {
+                override fun onAdDismissedFullScreenContent() {
+                    mInterstitialAd = null
+                    maybeLoadInterstitial()
+                    viewMainActivity()
+                }
+
+                override fun onAdFailedToShowFullScreenContent(adError: AdError) {
+                    mInterstitialAd = null
+                    viewMainActivity()
+                }
+            }
+            interstitial.show(this)
+        } else {
+            viewMainActivity()
+        }
     }
 
     private fun checkPremium() {

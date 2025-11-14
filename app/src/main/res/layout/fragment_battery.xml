@@ -12,40 +12,19 @@
 
         <LinearLayout
             android:id="@+id/battery_info_top"
-            android:background="#2682CC"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:gravity="center_horizontal"
+            android:background="#2682CC"
+            android:gravity="center"
             android:orientation="vertical"
             android:padding="15dp">
 
-
-            <androidx.gridlayout.widget.GridLayout
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                app:alignmentMode="alignBounds"
-                app:columnCount="3">
-
-                <com.jacktorscript.batterynotifier.widget.ArcProgress
-                    android:id="@+id/battery_view"
-                    android:layout_width="100dp"
-                    android:layout_height="100dp"
-                    android:layout_marginStart="50dp"
-                    app:arc_bottom_text="@string/battery"
-                    app:arc_text_color="@color/white" />
-
-                <com.jacktorscript.batterynotifier.widget.ArcProgress
-                    android:id="@+id/cpu_view_usage"
-                    android:layout_width="100dp"
-                    android:layout_height="100dp"
-                    android:layout_marginEnd="50dp"
-                    app:arc_bottom_text="@string/cpu"
-                    app:arc_text_color="@color/white"
-                    app:layout_column="2"
-                    app:layout_row="0" />
-
-            </androidx.gridlayout.widget.GridLayout>
-
+            <com.jacktorscript.batterynotifier.widget.ArcProgress
+                android:id="@+id/battery_view"
+                android:layout_width="120dp"
+                android:layout_height="120dp"
+                app:arc_bottom_text="@string/battery"
+                app:arc_text_color="@color/white" />
 
         </LinearLayout>
 
