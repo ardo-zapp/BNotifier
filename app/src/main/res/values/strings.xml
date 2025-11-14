@@ -67,7 +67,6 @@
     <string name="_0_mah" translatable="false">0 mAh</string>
     <string name="power_monitor">Power Monitor</string>
     <string name="_0w" translatable="false">0W</string>
-    <string name="cpu" translatable="false">CPU</string>
     <string name="welcome_advisory">BNotifier does not collect analytics, sell your data to third parties. Your data is stored securely and privately on your device.</string>
     <string name="welcome_btn_continue">Get Started</string>
     <string name="welcome_feature_one_summary">Get all the current status information and information about your battery.</string>

@@ -19,12 +19,10 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.appcompat.app.AppCompatDelegate
 import androidx.core.content.ContextCompat
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
+import androidx.navigation.NavController
 import androidx.navigation.findNavController
-import androidx.navigation.ui.setupWithNavController
 import com.google.android.gms.ads.AdRequest
-import com.google.android.gms.ads.AdView
 import com.google.android.material.appbar.MaterialToolbar
-import com.google.android.material.bottomnavigation.BottomNavigationView
 import com.google.android.material.snackbar.Snackbar
 import com.jacktorscript.batterynotifier.core.Prefs
 import com.jacktorscript.batterynotifier.core.PrefsConfig
@@ -38,6 +36,8 @@ class MainActivity : AppCompatActivity() {
     private var prefs: Prefs? = null
     var prefsConfig: PrefsConfig? = null
     private lateinit var binding: ActivityMainBinding
+    private lateinit var navController: NavController
+    private var baseTitle: String? = null
 
 
     private val requestPermissionLauncher = registerForActivityResult(
@@ -69,9 +69,7 @@ class MainActivity : AppCompatActivity() {
         binding = ActivityMainBinding.inflate(layoutInflater)
         setContentView(binding.root)
 
-        val navView: BottomNavigationView = binding.navView
-        val navController = findNavController(R.id.nav_host_fragment_activity_main)
-        navView.setupWithNavController(navController)
+        navController = findNavController(R.id.nav_host_fragment_activity_main)
 
         // Atur warna status bar untuk android lollipop
         if (Build.VERSION.SDK_INT <= 22) {
@@ -86,13 +84,36 @@ class MainActivity : AppCompatActivity() {
         }
 
         //toolbar
-        val topAppBar = findViewById<View>(R.id.topAppBar) as MaterialToolbar
+        val topAppBar = findViewById<MaterialToolbar>(R.id.topAppBar)
         setSupportActionBar(topAppBar)
+
+        baseTitle = if (prefsConfig!!.getPremium() == 1) {
+            getString(R.string.app_name) + " PRO"
+        } else {
+            getString(R.string.app_name)
+        }
+        supportActionBar?.title = baseTitle
+
+        topAppBar.setNavigationOnClickListener {
+            onBackPressedDispatcher.onBackPressed()
+        }
+
+        navController.addOnDestinationChangedListener { _, destination, _ ->
+            if (destination.id == R.id.navigation_home) {
+                supportActionBar?.title = baseTitle
+                topAppBar.navigationIcon = null
+            } else {
+                supportActionBar?.title = destination.label
+                topAppBar.setNavigationIcon(R.drawable.ic_arrow_back_24)
+            }
+        }
 
         //Tombol back
         onBackPressedDispatcher.addCallback(this, object : OnBackPressedCallback(true) {
             override fun handleOnBackPressed() {
-                finish()
+                if (!navController.popBackStack()) {
+                    finish()
+                }
             }
         })
 
@@ -100,12 +121,7 @@ class MainActivity : AppCompatActivity() {
         if (prefsConfig!!.getPremium() == 0) {
             loadBannerAd()
         } else {
-            findViewById<View>(R.id.adView).visibility = View.GONE
-        }
-
-        // Set judul jika premium ke PRO
-        if (prefsConfig!!.getPremium() == 1) {
-            topAppBar.title = getString(R.string.app_name) + " PRO"
+            binding.adView.visibility = View.GONE
         }
 
     }
@@ -128,16 +144,25 @@ class MainActivity : AppCompatActivity() {
             R.id.action_settings -> {
                 val intent = Intent(applicationContext, SettingsActivity::class.java)
                 startActivity(intent)
+                return true
             }
             R.id.upgrade_pro -> {
                 val intent = Intent(applicationContext, PremiumActivity::class.java)
                 startActivity(intent)
+                return true
+            }
+            R.id.action_about -> {
+                if (navController.currentDestination?.id != R.id.navigation_dashboard) {
+                    navController.navigate(R.id.navigation_dashboard)
+                }
+                return true
             }
             R.id.more_apps -> {
                 moreApps()
+                return true
             }
         }
-        return false
+        return super.onOptionsItemSelected(item)
     }
 
 
@@ -223,9 +248,8 @@ class MainActivity : AppCompatActivity() {
 
     //tampilkan iklan banner
     private fun loadBannerAd() {
-        val mAdView = findViewById<AdView>(R.id.adView)
         val adRequest = AdRequest.Builder().build()
-        mAdView!!.loadAd(adRequest)
+        binding.adView.loadAd(adRequest)
     }
 
 
