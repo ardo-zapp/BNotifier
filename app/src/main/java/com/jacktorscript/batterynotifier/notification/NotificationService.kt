@@ -1,15 +1,19 @@
 package com.jacktorscript.batterynotifier.notification
 
-import android.app.*
+import android.app.Notification
+import android.app.NotificationChannel
+import android.app.NotificationManager
+import android.app.PendingIntent
 import android.app.PendingIntent.FLAG_IMMUTABLE
+import android.app.Service
 import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
+import android.content.pm.ServiceInfo
 import android.os.Build
 import android.os.Handler
 import android.os.IBinder
 import android.os.Looper
-import androidx.annotation.RequiresApi
 import androidx.core.app.NotificationCompat
 import androidx.core.content.ContextCompat
 import androidx.core.graphics.drawable.toIcon
@@ -21,7 +25,7 @@ import com.jacktorscript.batterynotifier.core.PowerReceiver
 import com.jacktorscript.batterynotifier.core.Prefs
 
 class NotificationService : Service() {
-    private lateinit var receiver: PowerReceiver
+    private var receiver: PowerReceiver? = null
     private var prefs: Prefs? = null
     private var color = 0
 
@@ -31,23 +35,19 @@ class NotificationService : Service() {
         init(this)
 
         //Register receiver (PowerReceiver)
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            receiver = PowerReceiver()
-
-            IntentFilter(Intent.ACTION_POWER_CONNECTED).also {
-                registerReceiver(receiver, it)
-            }
-
-            IntentFilter(Intent.ACTION_POWER_DISCONNECTED).also {
-                registerReceiver(receiver, it)
-            }
+        receiver = PowerReceiver().also { powerReceiver ->
+            registerReceiver(powerReceiver, IntentFilter(Intent.ACTION_POWER_CONNECTED))
+            registerReceiver(powerReceiver, IntentFilter(Intent.ACTION_POWER_DISCONNECTED))
         }
     }
 
 
     override fun onDestroy() {
         super.onDestroy()
-        unregisterReceiver(receiver)
+        receiver?.let {
+            kotlin.runCatching { unregisterReceiver(it) }
+        }
+        receiver = null
     }
 
 
@@ -66,7 +66,6 @@ class NotificationService : Service() {
         const val CHANNEL_ID = "notificationService"
     }
 
-    @RequiresApi(Build.VERSION_CODES.M)
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         createNotificationChannel()
         val notificationIntent = Intent(this, MainActivity::class.java)
@@ -136,11 +135,7 @@ class NotificationService : Service() {
                             .setStyle(bigStyle)
                             .build()
 
-                        val notificationManager: NotificationManager =
-                            getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
-                        notificationManager.notify(1, notification)
-
-                        startForeground(1, notification)
+                        notifyForeground(notification)
                     } else {
 
                         //Android versi 7 kebawah
@@ -160,11 +155,7 @@ class NotificationService : Service() {
                                 .setOngoing(true)
                                 .build()
 
-                        val notificationManager: NotificationManager =
-                            getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
-                        notificationManager.notify(1, notification)
-
-                        startForeground(1, notification)
+                        notifyForeground(notification)
                     }
                 }
 
@@ -192,17 +183,15 @@ class NotificationService : Service() {
                 CHANNEL_ID,
                 getString(R.string.notification_service),
                 NotificationManager.IMPORTANCE_LOW
-            )
-            notificationChannel.setShowBadge(false)
-            notificationChannel.enableLights(false)
-            notificationChannel.enableVibration(false)
-            notificationChannel.lockscreenVisibility = Notification.VISIBILITY_SECRET
-            notificationChannel.description =
-                getString(R.string.notification_channel_desc)
-            val manager = getSystemService(
-                NotificationManager::class.java
-            )
-            manager!!.createNotificationChannel(notificationChannel)
+            ).apply {
+                setShowBadge(false)
+                enableLights(false)
+                enableVibration(false)
+                lockscreenVisibility = Notification.VISIBILITY_SECRET
+                description = getString(R.string.notification_channel_desc)
+            }
+            val manager = getSystemService(NotificationManager::class.java)
+            manager?.createNotificationChannel(notificationChannel)
         }
 
     }
@@ -226,5 +215,21 @@ class NotificationService : Service() {
 
     private fun init(context: Context) {
         prefs = Prefs(context)
+    }
+
+    private fun notifyForeground(notification: Notification) {
+        val notificationManager =
+            getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+        notificationManager.notify(1, notification)
+
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+            startForeground(
+                1,
+                notification,
+                ServiceInfo.FOREGROUND_SERVICE_TYPE_SPECIAL_USE
+            )
+        } else {
+            startForeground(1, notification)
+        }
     }
 }
